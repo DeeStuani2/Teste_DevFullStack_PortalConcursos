@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cadastro de Aprovados</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1000px; margin: 24px auto; padding: 0 12px; }
+    h1 { text-align: center; margin-bottom: 18px; }
+    form { display: grid; gap: 10px; }
+    input, textarea, button { padding: 10px; font-size: 14px; }
+    textarea { min-height: 90px; resize: vertical; }
+    button { cursor: pointer; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .full { grid-column: 1 / -1; }
+
+    pre { background: #f4f4f4; padding: 12px; overflow: auto; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+    th { background: #f7f7f7; }
+    img { display: block; max-width: 120px; max-height: 120px; object-fit: cover; border-radius: 6px; }
+    .actions { display:flex; gap:10px; align-items:center; margin: 10px 0; }
+    .muted { color: #666; font-size: 13px; }
+  </style>
+</head>
+
+<body>
+  <h1>Cadastro de Aprovados</h1>
+
+  <form id="form">
+    <div class="grid">
+      <input name="nome" placeholder="Nome" required autocomplete="name" />
+      <input name="email" type="email" placeholder="E-mail" required autocomplete="email" />
+      <input name="telefone" placeholder="Telefone" required autocomplete="tel" />
+      <input name="imagem" type="file" accept="image/*" />
+      <textarea class="full" name="concursos" placeholder="Quais concursos foi aprovado? (ex: TJSP, PF, INSS)" required></textarea>
+    </div>
+
+    <button type="submit">Enviar</button>
+    <div class="muted">
+      Dica: o back-end deve estar rodando em <b>http://localhost:8080</b>
+    </div>
+  </form>
+
+  <h3>Resposta do POST</h3>
+  <pre id="out">(sem envio ainda)</pre>
+
+  <div class="actions">
+    <h3 style="margin:0;">Lista de aprovados</h3>
+    <button id="btnRecarregar" type="button">Recarregar</button>
+  </div>
+
+  <div id="lista"></div>
+
+  <script>
+    const API = "http://localhost:8080/api/aprovados";
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function carregarLista() {
+      const listaDiv = document.getElementById("lista");
+      listaDiv.innerHTML = "Carregando...";
+
+      try {
+        const r = await fetch(API);
+        const data = await r.json();
+
+        if (!Array.isArray(data)) {
+          listaDiv.innerHTML = "<pre>Resposta inesperada:\n" + escapeHtml(JSON.stringify(data, null, 2)) + "</pre>";
+          return;
+        }
+
+        if (data.length === 0) {
+          listaDiv.innerHTML = "<p>Nenhum aprovado cadastrado.</p>";
+          return;
+        }
+
+        let html = `
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Imagem</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Telefone</th>
+                <th>Concursos</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        for (const a of data) {
+          const imgUrl = `${API}/${a.id}/imagem`;
+
+          html += `
+            <tr>
+              <td>${escapeHtml(a.id)}</td>
+              <td>
+                ${
+                  a.imagemPath
+                    ? `<a href="${imgUrl}" target="_blank" rel="noreferrer">
+                         <img src="${imgUrl}" alt="Imagem do aprovado ${escapeHtml(a.id)}"
+                              onerror="this.outerHTML='<span class=muted>Sem imagem</span>'" />
+                       </a>`
+                    : `<span class="muted">Sem imagem</span>`
+                }
+              </td>
+              <td>${escapeHtml(a.nome)}</td>
+              <td>${escapeHtml(a.email)}</td>
+              <td>${escapeHtml(a.telefone)}</td>
+              <td>${escapeHtml(a.concursos)}</td>
+            </tr>
+          `;
+        }
+
+        html += "</tbody></table>";
+        listaDiv.innerHTML = html;
+
+      } catch (err) {
+        listaDiv.innerHTML = "<pre>Erro ao carregar lista: " + escapeHtml(err) + "</pre>";
+      }
+    }
+
+    document.getElementById("btnRecarregar").addEventListener("click", carregarLista);
+
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const out = document.getElementById("out");
+      const fd = new FormData(e.target);
+
+      try {
+        const r = await fetch(API, { method: "POST", body: fd });
+        const text = await r.text(); // pega JSON ou erro
+
+        console.log("POST status:", r.status);
+        console.log("POST response:", text);
+
+        out.textContent = "Status: " + r.status + "\n\n" + text;
+
+        if (r.ok) {
+          e.target.reset();
+          await carregarLista(); // atualiza lista depois de salvar
+        }
+      } catch (err) {
+        console.error(err);
+        out.textContent = "Erro no fetch: " + err;
+      }
+    });
+
+    // Carrega a lista ao abrir
+    carregarLista();
+  </script>
+</body>
+</html>
