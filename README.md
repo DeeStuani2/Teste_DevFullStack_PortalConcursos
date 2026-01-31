@@ -185,13 +185,6 @@ Melhorias de layout
 
 👤 Autor
 Desenvolvido por Deewellys
-
-yaml
-Copiar código
-
----
-
-Se quiser, no próximo passo eu posso:
 - adaptar esse README para **padrão corporativo**
 - ajustar para **GitHub / GitLab**
 - ou escrever um **resumo para apresentação em entrevista**
