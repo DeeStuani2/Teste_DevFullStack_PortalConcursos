@@ -185,8 +185,3 @@ Melhorias de layout
 
 👤 Autor
 Desenvolvido por Deewellys
-- adaptar esse README para **padrão corporativo**
-- ajustar para **GitHub / GitLab**
-- ou escrever um **resumo para apresentação em entrevista**
-
-Só me dizer 👌
